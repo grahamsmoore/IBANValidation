@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ArrayOfArrayOfArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ArrayOfArrayOfString>
+    <ArrayOfString>
+      <string>c:\dev\github\performanceoptimizations\ibanvalidation\ibanvalidation\program.cs</string>
+    </ArrayOfString>
+    <ArrayOfString>
+      <string>C:\Dev\GitHub\PerformanceOptimizations\IBANValidation\IBANValidation\Validation.cs</string>
+    </ArrayOfString>
+    <ArrayOfString>
+      <string>c:\dev\github\performanceoptimizations\ibanvalidation\ibanvalidation\benchmark.cs</string>
+    </ArrayOfString>
+  </ArrayOfArrayOfString>
+</ArrayOfArrayOfArrayOfString>
