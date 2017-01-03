@@ -1,7 +1,42 @@
 For a project I was working on, I needed to validate International Bank Account Numbers (IBAN) in C#, naturally rather than reinventing the wheel I took a look on Google to see what was already available.  There weren't many relevant results available, but the top result pointed to [CodeProject](http://www.codeproject.com/Tips/775696/IBAN-Validator).
 
 The validation routine was a fairly short and simple method, great I thought, but then took a close look and alarm bells started ringing about it's potential performance issues.  Here is the code from the article:
-<script src="https://gist.github.com/grahamsmoore/03e5013039e93002a73cbddc6b1730fb.js"></script>
+```csharp
+public static bool ValidateBankAccount(string bankAccount)  
+{
+    const int asciiShift = 55;
+
+    bankAccount = bankAccount.ToUpper();
+    if (string.IsNullOrEmpty(bankAccount))
+        return false;
+
+    if (!Regex.IsMatch(bankAccount, "^[A-Z0-9]"))
+        return false;
+
+    bankAccount = bankAccount.Replace(" ", string.Empty);
+    var bank = bankAccount.Substring(4, bankAccount.Length - 4) + bankAccount.Substring(0, 4);
+    var sb = new StringBuilder();
+    foreach (var c in bank)
+    {
+        int v;
+        if (char.IsLetter(c)) v = c - asciiShift;
+        else v = int.Parse(c.ToString());
+        sb.Append(v);
+    }
+
+    var checkSumString = sb.ToString();
+    var checksum = int.Parse(checkSumString.Substring(0, 1));
+    for (var i = 1; i < checkSumString.Length; i++)
+    {
+        var v = int.Parse(checkSumString.Substring(i, 1));
+        checksum *= 10;
+        checksum += v;
+        checksum %= 97;
+    }
+
+    return checksum == 1;
+}
+```
 
 As you can see there are some immediately apparent issues:
 1. There is rather a lot of string manipulation taking place.
@@ -14,7 +49,54 @@ With these observations in mind, I set about attempting to write a more performa
 I will test the existing [CodeProject](http://www.codeproject.com/) method against my own on a known IBAN number.  The testing will be performed using the [BenchmarkDotNet](https://github.com/PerfDotNet/BenchmarkDotNet) library, also available on [NuGet](https://www.nuget.org/).
 
 Here is the code I came up with:
-<script src="https://gist.github.com/grahamsmoore/3d44de1506f6e46a09099f8256799b5c.js"></script>
+```csharp
+public static unsafe bool ValidateBankAccount2(string bankAccount)
+{
+    const int asciiShift = 55;
+    var length = bankAccount.Length;
+
+    fixed (char* t = bankAccount)
+    {
+        var checksum = int.MinValue;
+        var startIndex = 4;
+        for (var i = 0; i < length; i++)
+        {
+            var currentItem = t[startIndex];
+            int currentItemNumber;
+            if (char.IsLetter(currentItem))
+            {
+                currentItemNumber = currentItem - asciiShift;
+            }
+            else if (char.IsNumber(currentItem))
+            {
+                currentItemNumber = (int)char.GetNumericValue(currentItem);
+            }
+            else
+            {
+                return false;
+            }
+
+            if (i == 0)
+            {
+                checksum = currentItemNumber;
+            }
+            else
+            {
+                checksum *= 10;
+                checksum += currentItemNumber;
+                checksum %= 97;
+            }
+
+            if (++startIndex == length)
+            {
+                startIndex = 0;
+            }
+        }
+
+        return checksum == 1;
+    }
+}
+```
 
 As you can see the code has been improved in a number of ways:
 1. Removal of all RegEx matches.
